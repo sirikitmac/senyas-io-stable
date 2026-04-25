@@ -1,0 +1,8 @@
+{
+  "name": "Senyas.IO",
+  "description": "Accessibility-focused camera-based sign interpretation system for the Deaf and hard of hearing.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": []
+}
