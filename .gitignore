@@ -1,8 +1,22 @@
+# Dependencies
 node_modules/
+
+# Next.js build output
+.next/
+.turbo/
+out/
+
+# General build/dist
 build/
 dist/
 coverage/
+
+# OS/System files
 .DS_Store
+
+# Logs
 *.log
+
+# Environment variables
 .env*
 !.env.example
