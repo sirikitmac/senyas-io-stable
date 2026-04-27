@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Moon, Sun, Accessibility } from 'lucide-react';
+import { Moon, Sun } from 'lucide-react';
+import { useRouter } from 'next/navigation'; // 1. Import this
 
 const navItems = [
   { name: 'Home', id: 'home' },
@@ -20,15 +21,12 @@ interface NavbarProps {
 export default function Navbar({ toggleTheme, isDarkMode }: NavbarProps) {
   const [activeTab, setActiveTab] = useState('home');
   const [isScrolled, setIsScrolled] = useState(false);
+  const router = useRouter(); // 2. Initialize router
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
-
-      // Scroll Spy logic
       const sections = navItems.map(item => document.getElementById(item.id));
-      
-      // Bottom of page check
       const isBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 100;
       
       if (isBottom) {
@@ -109,12 +107,9 @@ export default function Navbar({ toggleTheme, isDarkMode }: NavbarProps) {
               className="relative w-12 sm:w-14 h-7 sm:h-8 bg-[#1a1a1a] dark:bg-[#1a1a1a] light:bg-black/10 rounded-full p-1 flex items-center justify-between cursor-pointer group overflow-hidden"
               aria-label="Toggle theme"
             >
-              {/* Sliding Background */}
               <motion.div 
                 className="absolute inset-0 bg-brand/5 opacity-0 group-hover:opacity-100 transition-opacity"
               />
-              
-              {/* Sliding Circle */}
               <motion.div
                 animate={{ x: isDarkMode ? 0 : 20 }}
                 transition={{ type: 'spring', stiffness: 500, damping: 30 }}
@@ -138,6 +133,7 @@ export default function Navbar({ toggleTheme, isDarkMode }: NavbarProps) {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            onClick={() => router.push('/login')} // 3. Added navigation
             className="px-4 sm:px-6 py-2 bg-brand text-black text-[10px] sm:text-xs font-black rounded-full cursor-pointer shadow-[0_5px_15px_rgba(255,179,198,0.3)] light:shadow-[0_5px_15px_rgba(255,100,140,0.3)] hover:shadow-[0_8px_20px_rgba(255,179,198,0.4)] light:hover:shadow-[0_8px_25px_rgba(255,100,140,0.4)] transition-all whitespace-nowrap"
           >
             Sign Up
