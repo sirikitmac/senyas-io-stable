@@ -12,10 +12,13 @@ import Background from '@/components/Background';
 export default function Home() {
   const [isDarkMode, setIsDarkMode] = useState(true);
 
+  // Sync theme with the document element
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.remove('light');
+      document.documentElement.classList.add('dark');
     } else {
+      document.documentElement.classList.remove('dark');
       document.documentElement.classList.add('light');
     }
   }, [isDarkMode]);
@@ -24,7 +27,11 @@ export default function Home() {
 
   return (
     <main className={`relative selection:bg-brand selection:text-black min-h-screen overflow-x-hidden ${isDarkMode ? 'dark' : 'light'}`}>
+      
+      {/* Background stays persistent across the landing page */}
       <Background isDarkMode={isDarkMode} />
+      
+      {/* Navbar manages navigation to /login via the Link/Router components */}
       <Navbar toggleTheme={toggleTheme} isDarkMode={isDarkMode} />
       
       <div className="relative z-10">
@@ -34,6 +41,7 @@ export default function Home() {
         <Impact />
         <Contact />
       </div>
+      
     </main>
   );
 }

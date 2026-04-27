@@ -1,10 +1,12 @@
 'use client';
 
 import { motion } from 'motion/react';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { useRouter } from 'next/navigation'; // 1. Import router
 import Magnetic from '@/components/ui/Magnetic';
 
 export default function Hero() {
+  const router = useRouter(); // 2. Initialize router
+
   return (
     <section id="home" className="min-h-screen flex flex-col items-center justify-center pt-20 px-4">
       <motion.div
@@ -38,6 +40,7 @@ export default function Hero() {
         <div className="flex flex-col gap-8 items-center">
           <Magnetic strength={0.25}>
             <motion.button
+              onClick={() => router.push('/login')} // 3. Added navigation here
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               animate={{ 
