@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import styles from "./login.module.css";
 
 import { FcGoogle } from "react-icons/fc";
@@ -8,6 +9,7 @@ import { FaFacebookF, FaApple } from "react-icons/fa";
 
 export default function LoginPage() {
   const [isLight, setIsLight] = useState(false);
+  const router = useRouter();
 
   return (
     <main className={`${styles.loginWrapper} ${isLight ? styles.light : ""}`}>
@@ -69,6 +71,7 @@ export default function LoginPage() {
               <button
                 className={`${styles.btnGuest} ${styles.animateSlideUp} ${styles.delay5}`}
                 type="button"
+                onClick={() => router.push('/translator')}
               >
                 Continue as Guest
               </button>
