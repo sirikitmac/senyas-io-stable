@@ -1,8 +1,10 @@
 "use client";
 
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./login.module.css";
+import SenyasBot from '@/components/ui/SenyasBot';
 
 import { FcGoogle } from "react-icons/fc";
 import { FaFacebookF, FaApple } from "react-icons/fa";
@@ -115,7 +117,18 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className={styles.rightPanel}>
+        <div className={styles.rightPanel} style={{ position: 'relative' }}>
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '40px',
+              left: '40px',
+              pointerEvents: 'none',
+              zIndex: 10,
+            }}
+          >
+            <SenyasBot size={320} />
+          </div>
           <div className={styles.movingGrid}></div>
           <div className={styles.noiseOverlay}></div>
           <div className={styles.rightGlow}></div>

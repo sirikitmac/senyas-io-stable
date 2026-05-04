@@ -1062,15 +1062,27 @@
   gap: 8px;
   padding: 14px 20px;
   border-radius: var(--radius-md);
-  background: rgba(239, 68, 68, 0.06);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  color: rgba(239, 68, 68, 0.55);
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.32);
+  color: rgba(239, 68, 68, 0.85);
   font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
   text-transform: uppercase;
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.12);
+}
+
+.emergencyBtn:hover {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.55);
+  color: #ef4444;
+  box-shadow: 0 0 22px rgba(239, 68, 68, 0.25);
+}
+
+.emergencyBtn:active {
+  transform: scale(0.98);
 }
 
 .emergencyBtn:hover {
@@ -1079,16 +1091,26 @@
   color: rgba(239, 68, 68, 0.8);
 }
 
-[data-theme="light"] .emergencyBtn {
-  background: rgba(239, 68, 68, 0.05);
-  border-color: rgba(239, 68, 68, 0.18);
-  color: rgba(185, 28, 28, 0.55);
+.emergencyBtn:hover {
+  background: rgba(239, 68, 68, 0.11);
+  border-color: rgba(239, 68, 68, 0.36);
+  color: rgba(239, 68, 68, 0.8);
 }
 
-[data-theme="light"] .emergencyBtn:hover {
-  background: rgba(239, 68, 68, 0.09);
-  border-color: rgba(239, 68, 68, 0.32);
-  color: rgba(185, 28, 28, 0.8);
+[data-theme="light"] .emergencyBtn,
+:root.light .emergencyBtn {
+  background: rgba(220, 38, 38, 0.08);
+  border-color: rgba(220, 38, 38, 0.4);
+  color: #b91c1c;
+  box-shadow: 0 0 14px rgba(220, 38, 38, 0.1);
+}
+
+[data-theme="light"] .emergencyBtn:hover,
+:root.light .emergencyBtn:hover {
+  background: rgba(220, 38, 38, 0.14);
+  border-color: rgba(220, 38, 38, 0.65);
+  color: #991b1b;
+  box-shadow: 0 0 22px rgba(220, 38, 38, 0.22);
 }
 
 .quickBar {
@@ -1105,15 +1127,22 @@
   gap: 8px;
   padding: 14px 20px;
   border-radius: var(--radius-md);
-  background: var(--accent);
+  background: #22c55e;
   border: none;
-  color: #0d0d0d;
+  color: #052e13;
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.04em;
   cursor: pointer;
-  transition: filter 0.2s ease, opacity 0.2s ease;
-  box-shadow: none;
+  transition: filter 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 0 16px rgba(34, 197, 94, 0.25);
+}
+
+[data-theme="light"] .quickMainBtn,
+:root.light .quickMainBtn {
+  background: #16a34a;
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(22, 163, 74, 0.2);
 }
 
 .quickMainBtn:hover:not(:disabled) {
@@ -1447,4 +1476,60 @@
   .sidebarContent {
     width: 280px;
   }
+}
+
+/* ── Edge Chevrons (sidebar collapse) ────────────────── */
+.edgeChevron {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 44px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease;
+  z-index: 20;
+  border-radius: 6px;
+}
+
+.edgeChevron:hover {
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.edgeChevronLeft {
+  right: 4px;
+}
+
+.edgeChevronRight {
+  left: 4px;
+}
+
+/* ── Color select with swatch ────────────────────────── */
+.selectWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.selectColorDot {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--border-hover);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.colorSelect {
+  padding-left: 36px;
 }

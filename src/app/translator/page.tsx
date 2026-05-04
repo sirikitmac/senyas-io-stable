@@ -310,6 +310,15 @@ export default function TranslatorPage() {
           transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
           className={cls(styles.sidebar, styles.leftSidebar)}
         >
+          {!leftCollapsed && (
+            <button
+              onClick={() => setLeftCollapsed(true)}
+              className={cls(styles.edgeChevron, styles.edgeChevronLeft)}
+              title="Collapse"
+            >
+              <ChevronLeft size={14} />
+            </button>
+          )}
           <AnimatePresence>
             {!leftCollapsed && (
               <motion.div
@@ -512,12 +521,7 @@ export default function TranslatorPage() {
                   })}
                 </div>
 
-                <div className={styles.sidebarFooter}>
-                  <button onClick={() => setLeftCollapsed(true)} className={styles.collapseBtn}>
-                    <ChevronLeft size={13} />
-                    Collapse
-                  </button>
-                </div>
+              
               </motion.div>
             )}
           </AnimatePresence>
@@ -726,6 +730,15 @@ export default function TranslatorPage() {
           transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
           className={cls(styles.sidebar, styles.rightSidebar)}
         >
+          {!rightCollapsed && (
+            <button
+              onClick={() => setRightCollapsed(true)}
+              className={cls(styles.edgeChevron, styles.edgeChevronRight)}
+              title="Minimize"
+            >
+              <ChevronRight size={14} />
+            </button>
+          )}
           <AnimatePresence>
             {!rightCollapsed && (
               <motion.div
@@ -754,38 +767,36 @@ export default function TranslatorPage() {
 
                 <div className={styles.settingGroup}>
                   <p className={styles.settingGroupTitle}>Mediapipe Color</p>
-                  <div className={styles.colorGrid}>
-                    {Object.entries(COLOR_MAP).map(([name, hex]) => (
-                      <button
-                        key={name}
-                        onClick={() => setLandmarkColor(hex)}
-                        className={cls(styles.colorChip, selectedColorKey === name && styles.active)}
-                        style={{
-                          background: hex,
-                          opacity: selectedColorKey === name ? 1 : 0.45,
-                        }}
-                        title={name.charAt(0).toUpperCase() + name.slice(1)}
-                      />
-                    ))}
+                  <div className={styles.selectWrapper}>
+                    <span
+                      className={styles.selectColorDot}
+                      style={{ background: landmarkColor }}
+                    />
+                    <select
+                      className={cls(styles.voiceSelect, styles.colorSelect)}
+                      value={selectedColorKey}
+                      onChange={e => setLandmarkColor(COLOR_MAP[e.target.value])}
+                    >
+                      {Object.keys(COLOR_MAP).map(name => (
+                        <option key={name} value={name}>
+                          {name.charAt(0).toUpperCase() + name.slice(1)}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
                 <div className={styles.settingGroup}>
                   <p className={styles.settingGroupTitle}>Display Mode</p>
-                  <div className={styles.displayModeList}>
-                    {(['camera', 'mediapipe', 'both'] as const).map(mode => (
-                      <button
-                        key={mode}
-                        onClick={() => setDisplayMode(mode)}
-                        className={cls(styles.displayModeOption, displayMode === mode && styles.active)}
-                      >
-                        <span className={styles.radioCircle}>
-                          {displayMode === mode && <span className={styles.radioDot} />}
-                        </span>
-                        {mode === 'camera' ? 'Camera Only' : mode === 'mediapipe' ? 'Mediapipe Only' : 'Both'}
-                      </button>
-                    ))}
-                  </div>
+                  <select
+                    className={styles.voiceSelect}
+                    value={displayMode}
+                    onChange={e => setDisplayMode(e.target.value as 'camera' | 'mediapipe' | 'both')}
+                  >
+                    <option value="camera">Camera Only</option>
+                    <option value="mediapipe">Mediapipe Only</option>
+                    <option value="both">Both</option>
+                  </select>
                 </div>
 
                 <div className={styles.settingGroup}>
@@ -802,30 +813,7 @@ export default function TranslatorPage() {
                   </select>
                 </div>
 
-                <div className={styles.settingGroup}>
-                  <p className={styles.settingGroupTitle}>Theme</p>
-                  <div className={styles.themeToggleRow}>
-                    <button
-                      onClick={() => setTheme('dark')}
-                      className={cls(styles.themeBtn, theme === 'dark' && styles.active)}
-                    >
-                      <Moon size={13} /> Night
-                    </button>
-                    <button
-                      onClick={() => setTheme('light')}
-                      className={cls(styles.themeBtn, theme === 'light' && styles.active)}
-                    >
-                      <Sun size={13} /> Light
-                    </button>
-                  </div>
-                </div>
-
-                <div className={styles.sidebarFooter}>
-                  <button onClick={() => setRightCollapsed(true)} className={styles.collapseBtn}>
-                    <ChevronRight size={13} />
-                    Minimize
-                  </button>
-                </div>
+            
               </motion.div>
             )}
           </AnimatePresence>
