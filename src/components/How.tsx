@@ -113,6 +113,45 @@ export default function How() {
           </motion.div>
         ))}
       </div>
+
+      {/* Demo video section */}
+      <div className="mt-24 flex flex-col items-center text-center">
+        <motion.p
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          className="text-brand font-mono text-sm tracking-widest uppercase mb-4"
+        >
+          Live Demo
+        </motion.p>
+        <motion.h3
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-2xl sm:text-3xl md:text-5xl font-sans font-extrabold mb-12 tracking-tight dark:text-white light:text-[#111111]"
+        >
+          See it in action
+        </motion.h3>
+
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+          className="relative w-full max-w-4xl rounded-3xl overflow-hidden border border-white/10 light:border-black/10 shadow-[0_0_60px_rgba(255,179,198,0.15)] light:shadow-[0_0_60px_rgba(255,100,140,0.15)]"
+        >
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            poster="/demo-poster.png"
+            className="w-full h-auto block"
+          >
+            <source src="/demo.mp4" type="video/mp4" />
+          </video>
+        </motion.div>
+      </div>
     </section>
   );
 }

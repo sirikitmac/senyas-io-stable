@@ -1,11 +1,11 @@
 'use client';
 
 import { motion } from 'motion/react';
-import { useRouter } from 'next/navigation'; // 1. Import router
+import { useRouter } from 'next/navigation';
 import Magnetic from '@/components/ui/Magnetic';
 
 export default function Hero() {
-  const router = useRouter(); // 2. Initialize router
+  const router = useRouter();
 
   return (
     <section id="home" className="min-h-screen flex flex-col items-center justify-center pt-20 px-4">
@@ -37,10 +37,29 @@ export default function Hero() {
           Simple, accessible, and built for Deaf users.
         </p>
 
+        {/* Demo video - small preview */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4, duration: 0.8 }}
+          className="relative w-full max-w-md mx-auto mb-8 rounded-2xl overflow-hidden border border-white/10 light:border-black/10 shadow-[0_0_40px_rgba(255,179,198,0.15)]"
+        >
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            poster="/demo-poster.png"
+            className="w-full h-auto block"
+          >
+            <source src="/demo.mp4" type="video/mp4" />
+          </video>
+        </motion.div>
+
         <div className="flex flex-col gap-8 items-center">
           <Magnetic strength={0.25}>
             <motion.button
-              onClick={() => router.push('/login')} // 3. Added navigation here
+              onClick={() => router.push('/login')}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               animate={{ 
@@ -86,7 +105,6 @@ export default function Hero() {
         </div>
       </motion.div>
 
-      {/* Hero Visual Accent */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
