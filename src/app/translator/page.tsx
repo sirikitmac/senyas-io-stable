@@ -37,6 +37,39 @@ const COLOR_MAP: Record<string, string> = {
   orange: '#fb923c',
 };
 
+// Cycle through these colors for contact avatars
+const CONTACT_COLORS = [
+  { bg: 'rgba(255, 179, 198, 0.18)', text: '#ffb3c6', textLight: '#d63a6b' },
+  { bg: 'rgba(6, 182, 212, 0.18)',   text: '#06b6d4', textLight: '#0891b2' },
+  { bg: 'rgba(139, 92, 246, 0.18)',  text: '#a78bfa', textLight: '#7c3aed' },
+  { bg: 'rgba(250, 204, 21, 0.18)',  text: '#facc15', textLight: '#b45309' },
+  { bg: 'rgba(46, 204, 113, 0.18)',  text: '#2ecc71', textLight: '#0f766e' },
+];
+
+const getInitials = (name: string): string => {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+const formatPhone = (number: string): string => {
+  const cleaned = number.replace(/\D/g, '');
+  if (cleaned.length === 11 && cleaned.startsWith('09')) {
+    return `${cleaned.slice(0, 4)} ${cleaned.slice(4, 7)} ${cleaned.slice(7)}`;
+  }
+  if (cleaned.length === 12 && cleaned.startsWith('63')) {
+    return `+63 ${cleaned.slice(2, 5)} ${cleaned.slice(5, 8)} ${cleaned.slice(8)}`;
+  }
+  return number;
+};
+
+type Contact = {
+  name: string;
+  relationship: string;
+  number: string;
+};
+
 export default function TranslatorPage() {
   const [leftCollapsed,   setLeftCollapsed]   = useState(false);
   const [rightCollapsed,  setRightCollapsed]  = useState(false);
@@ -58,7 +91,7 @@ export default function TranslatorPage() {
   const [voices,          setVoices]          = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoice,   setSelectedVoice]   = useState<SpeechSynthesisVoice | null>(null);
 
-  // ── Profile ──────────────────────────────────────────
+  // Profile
   const [profileName,     setProfileName]     = useState('Juan Dela Cruz');
   const [profileAge,      setProfileAge]      = useState('21');
   const [profileLocation, setProfileLocation] = useState('Iligan City');
@@ -69,26 +102,32 @@ export default function TranslatorPage() {
   const [draftLocation,   setDraftLocation]   = useState('');
   const [draftBio,        setDraftBio]        = useState('');
 
-  // ── Contacts ─────────────────────────────────────────
-  const [contacts, setContacts] = useState([
-    { name: 'Maria Dela Cruz', number: '09123456789' },
-    { name: 'Pedro Santos',    number: '09987654321' },
+  // Contacts (now with relationship)
+  const [contacts, setContacts] = useState<Contact[]>([
+    { name: 'Maria Dela Cruz', relationship: 'Mom',     number: '09123456789' },
+    { name: 'Pedro Santos',    relationship: 'Brother', number: '09987654321' },
   ]);
-  const [editingContactIdx, setEditingContactIdx] = useState<number | null>(null);
-  const [editContactName,   setEditContactName]   = useState('');
-  const [editContactNumber, setEditContactNumber] = useState('');
-  const [showAddContact,    setShowAddContact]    = useState(false);
-  const [newContactName,    setNewContactName]    = useState('');
-  const [newContactNumber,  setNewContactNumber]  = useState('');
-  const [addContactError,   setAddContactError]   = useState('');
+  const [editingContactIdx,    setEditingContactIdx]    = useState<number | null>(null);
+  const [editContactName,      setEditContactName]      = useState('');
+  const [editContactRelation,  setEditContactRelation]  = useState('');
+  const [editContactNumber,    setEditContactNumber]    = useState('');
+  const [showAddContact,       setShowAddContact]       = useState(false);
+  const [newContactName,       setNewContactName]       = useState('');
+  const [newContactRelation,   setNewContactRelation]   = useState('');
+  const [newContactNumber,     setNewContactNumber]     = useState('');
+  const [addContactError,      setAddContactError]      = useState('');
 
   const detectorRef = useRef<ASLDetectorRef>(null);
 
+  // Sync both data-theme attribute AND .light class so global styles + module styles stay in sync
   useEffect(() => {
+    const root = document.documentElement;
     if (theme === 'light') {
-      document.documentElement.setAttribute('data-theme', 'light');
+      root.setAttribute('data-theme', 'light');
+      root.classList.add('light');
     } else {
-      document.documentElement.removeAttribute('data-theme');
+      root.removeAttribute('data-theme');
+      root.classList.remove('light');
     }
   }, [theme]);
 
@@ -158,13 +197,18 @@ export default function TranslatorPage() {
   const startEditContact = (idx: number) => {
     setEditingContactIdx(idx);
     setEditContactName(contacts[idx].name);
+    setEditContactRelation(contacts[idx].relationship);
     setEditContactNumber(contacts[idx].number);
   };
 
   const saveContact = (idx: number) => {
     if (!editContactName.trim() || !editContactNumber.trim()) return;
     setContacts(prev => prev.map((c, i) =>
-      i === idx ? { name: editContactName.trim(), number: editContactNumber.trim() } : c
+      i === idx ? {
+        name: editContactName.trim(),
+        relationship: editContactRelation.trim(),
+        number: editContactNumber.trim(),
+      } : c
     ));
     setEditingContactIdx(null);
   };
@@ -172,8 +216,13 @@ export default function TranslatorPage() {
   const addContact = () => {
     if (!newContactName.trim())   { setAddContactError('Name is required.');         return; }
     if (!newContactNumber.trim()) { setAddContactError('Phone number is required.'); return; }
-    setContacts(prev => [...prev, { name: newContactName.trim(), number: newContactNumber.trim() }]);
+    setContacts(prev => [...prev, {
+      name: newContactName.trim(),
+      relationship: newContactRelation.trim(),
+      number: newContactNumber.trim(),
+    }]);
     setNewContactName('');
+    setNewContactRelation('');
     setNewContactNumber('');
     setAddContactError('');
     setShowAddContact(false);
@@ -181,6 +230,7 @@ export default function TranslatorPage() {
 
   const cancelAddContact = () => {
     setNewContactName('');
+    setNewContactRelation('');
     setNewContactNumber('');
     setAddContactError('');
     setShowAddContact(false);
@@ -191,6 +241,8 @@ export default function TranslatorPage() {
 
   const cls = (...parts: (string | false | undefined)[]) =>
     parts.filter(Boolean).join(' ');
+
+  const profileInitials = getInitials(profileName);
 
   return (
     <div className={styles.container}>
@@ -270,8 +322,8 @@ export default function TranslatorPage() {
               >
                 {/* ── Profile Section ───────────────────────── */}
                 <div className={styles.profileSection}>
-                  <div className={styles.profileAvatar}>
-                    <User size={24} />
+                  <div className={styles.profileAvatarLarge}>
+                    <span className={styles.profileAvatarInitials}>{profileInitials}</span>
                   </div>
 
                   {editingProfile ? (
@@ -359,6 +411,12 @@ export default function TranslatorPage() {
                           />
                           <input
                             className={styles.contactInput}
+                            value={newContactRelation}
+                            onChange={e => setNewContactRelation(e.target.value)}
+                            placeholder="Relationship (e.g. Mom, Doctor)"
+                          />
+                          <input
+                            className={styles.contactInput}
                             value={newContactNumber}
                             onChange={e => { setNewContactNumber(e.target.value); setAddContactError(''); }}
                             placeholder="Phone number"
@@ -373,44 +431,85 @@ export default function TranslatorPage() {
                     )}
                   </AnimatePresence>
 
-                  {contacts.map((contact, idx) => (
-                    <div key={idx} className={styles.contactCard}>
-                      {editingContactIdx === idx ? (
-                        <>
-                          <input
-                            className={styles.contactInput}
-                            value={editContactName}
-                            onChange={e => setEditContactName(e.target.value)}
-                            placeholder="Contact name"
-                          />
-                          <input
-                            className={styles.contactInput}
-                            value={editContactNumber}
-                            onChange={e => setEditContactNumber(e.target.value)}
-                            placeholder="Phone number"
-                          />
-                          <div className={styles.editActions}>
-                            <button className={styles.saveBtn} onClick={() => saveContact(idx)}>Save</button>
-                            <button className={styles.cancelBtn} onClick={() => setEditingContactIdx(null)}>Cancel</button>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className={styles.contactCardTop}>
-                            <p className={styles.contactName}>{contact.name}</p>
-                            <button
-                              className={styles.iconBtnTiny}
-                              onClick={() => startEditContact(idx)}
-                              title="Edit contact"
+                  {contacts.map((contact, idx) => {
+                    const color = CONTACT_COLORS[idx % CONTACT_COLORS.length];
+                    const initials = getInitials(contact.name);
+                    const isLight = theme === 'light';
+                    const accentText = isLight ? color.textLight : color.text;
+
+                    return (
+                      <div
+                        key={idx}
+                        className={styles.contactCard}
+                        style={{
+                          borderLeft: `3px solid ${accentText}`,
+                        }}
+                      >
+                        {editingContactIdx === idx ? (
+                          <>
+                            <input
+                              className={styles.contactInput}
+                              value={editContactName}
+                              onChange={e => setEditContactName(e.target.value)}
+                              placeholder="Contact name"
+                            />
+                            <input
+                              className={styles.contactInput}
+                              value={editContactRelation}
+                              onChange={e => setEditContactRelation(e.target.value)}
+                              placeholder="Relationship"
+                            />
+                            <input
+                              className={styles.contactInput}
+                              value={editContactNumber}
+                              onChange={e => setEditContactNumber(e.target.value)}
+                              placeholder="Phone number"
+                            />
+                            <div className={styles.editActions}>
+                              <button className={styles.saveBtn} onClick={() => saveContact(idx)}>Save</button>
+                              <button className={styles.cancelBtn} onClick={() => setEditingContactIdx(null)}>Cancel</button>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className={styles.contactCardTop}>
+                              <div
+                                className={styles.contactAvatar}
+                                style={{
+                                  background: color.bg,
+                                  color: accentText,
+                                }}
+                              >
+                                {initials}
+                              </div>
+                              <div className={styles.contactInfo}>
+                                <p className={styles.contactName}>{contact.name}</p>
+                                {contact.relationship && (
+                                  <p className={styles.contactRelationship}>{contact.relationship}</p>
+                                )}
+                              </div>
+                              <button
+                                className={styles.iconBtnTiny}
+                                onClick={() => startEditContact(idx)}
+                                title="Edit contact"
+                              >
+                                <Pencil size={11} />
+                              </button>
+                            </div>
+                            <p
+                              className={styles.contactNumber}
+                              style={{
+                                color: accentText,
+                                textShadow: isLight ? 'none' : `0 0 12px ${color.bg}`,
+                              }}
                             >
-                              <Pencil size={11} />
-                            </button>
-                          </div>
-                          <p className={styles.contactNumber}>{contact.number}</p>
-                        </>
-                      )}
-                    </div>
-                  ))}
+                              {formatPhone(contact.number)}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
 
                 <div className={styles.sidebarFooter}>
@@ -495,18 +594,8 @@ export default function TranslatorPage() {
                 rows={2}
               />
               <div className={styles.outputActions}>
-                <button
-                  onClick={() => detectorRef.current?.deleteLastChar()}
-                  className={styles.outputActionBtn}
-                >
-                  Delete
-                </button>
-                <button
-                  onClick={handleSpace}
-                  className={styles.outputActionBtn}
-                >
-                  Space
-                </button>
+                <button onClick={() => detectorRef.current?.deleteLastChar()} className={styles.outputActionBtn}>Delete</button>
+                <button onClick={handleSpace} className={styles.outputActionBtn}>Space</button>
                 <button
                   onClick={handleCopy}
                   disabled={!sentence}
@@ -576,9 +665,7 @@ export default function TranslatorPage() {
                         onChange={e => setCustomText(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && addCustomMessage()}
                       />
-                      <button onClick={addCustomMessage} className={styles.addMsgSubmit}>
-                        Add
-                      </button>
+                      <button onClick={addCustomMessage} className={styles.addMsgSubmit}>Add</button>
                     </div>
                   </motion.div>
                 )}
@@ -695,11 +782,7 @@ export default function TranslatorPage() {
                         <span className={styles.radioCircle}>
                           {displayMode === mode && <span className={styles.radioDot} />}
                         </span>
-                        {mode === 'camera'
-                          ? 'Camera Only'
-                          : mode === 'mediapipe'
-                          ? 'Mediapipe Only'
-                          : 'Both'}
+                        {mode === 'camera' ? 'Camera Only' : mode === 'mediapipe' ? 'Mediapipe Only' : 'Both'}
                       </button>
                     ))}
                   </div>
