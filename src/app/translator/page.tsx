@@ -14,7 +14,11 @@ import {
   Pencil,
   Copy,
   Check,
+  Mic,
+  Type,
+  Send,
 } from 'lucide-react';
+import { toast, Toaster } from 'sonner';
 import styles from './translator.module.css';
 import ASLDetector, { ASLDetectorRef } from '../../components/ASLdetector';
 
@@ -96,6 +100,8 @@ export default function TranslatorPage() {
   const [convMessages,    setConvMessages]    = useState<ConvMessage[]>([]);
   const [isListening,     setIsListening]     = useState(false);
   const [speechSupported, setSpeechSupported] = useState(false);
+  const [manualInputOpen, setManualInputOpen] = useState(false);
+  const [manualText,      setManualText]      = useState('');
 
   // Profile
   const [profileName,     setProfileName]     = useState('Juan Dela Cruz');
@@ -131,7 +137,8 @@ export default function TranslatorPage() {
   const interimIdRef      = useRef<string | null>(null);
   const convFeedRef       = useRef<HTMLDivElement>(null);
   const pauseTimerRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastCommittedRef  = useRef('');
+  const lastCommittedRef   = useRef('');
+  const speechDetectedRef  = useRef(false);
 
   // Sync both data-theme attribute AND .light class so global styles + module styles stay in sync
   useEffect(() => {
@@ -161,7 +168,10 @@ export default function TranslatorPage() {
 
   useEffect(() => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) return;
+    if (!SR) {
+      toast.error('Speech recognition not available in this browser. Try Chrome.', { duration: 5000 });
+      return;
+    }
     setSpeechSupported(true);
     const rec = new SR();
     rec.continuous = true;
@@ -171,6 +181,10 @@ export default function TranslatorPage() {
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const text = e.results[i][0].transcript.trim();
         if (!text) continue;
+        if (!speechDetectedRef.current) {
+          speechDetectedRef.current = true;
+          toast.success('Speech detected', { duration: 1500 });
+        }
         if (e.results[i].isFinal) {
           const fid = interimIdRef.current;
           interimIdRef.current = null;
@@ -187,6 +201,12 @@ export default function TranslatorPage() {
             return [...prev, { id, speaker: 'hearing', text, timestamp: Date.now(), interim: true }];
           });
         }
+      }
+    };
+    rec.onerror = (e: any) => {
+      if (e.error === 'not-allowed') {
+        toast.error('Microphone access denied', { duration: 4000 });
+        setIsListening(false);
       }
     };
     rec.onend = () => { setIsListening(false); interimIdRef.current = null; };
@@ -227,6 +247,13 @@ export default function TranslatorPage() {
   useEffect(() => {
     const id = setInterval(() => setTimeTick(n => n + 1), 30000);
     return () => clearInterval(id);
+  }, []);
+
+  // Restore manual input toggle from localStorage
+  useEffect(() => {
+    if (localStorage.getItem('senyas-manual-input-enabled') === 'true') {
+      setManualInputOpen(true);
+    }
   }, []);
 
   // Auto-scroll conversation feed to bottom on new messages
@@ -277,9 +304,23 @@ export default function TranslatorPage() {
     if (!recognitionRef.current) return;
     if (isListening) {
       recognitionRef.current.stop();
+      toast('Stopped listening', { duration: 1500 });
     } else {
-      try { recognitionRef.current.start(); setIsListening(true); } catch {}
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+        speechDetectedRef.current = false;
+        toast('🎙️ Listening for speech...', { duration: 2000 });
+      } catch {}
     }
+  };
+
+  const sendManualMessage = () => {
+    const trimmed = manualText.trim();
+    if (!trimmed) return;
+    addDeafMessage(trimmed);
+    speakText(trimmed);
+    setManualText('');
   };
 
   // timeTick is read here so re-renders from the 30s interval recalculate all timestamps
@@ -299,6 +340,7 @@ export default function TranslatorPage() {
     if (!sentence) return;
     navigator.clipboard.writeText(sentence).then(() => {
       setCopied(true);
+      toast.success('Copied to clipboard', { duration: 1500 });
       setTimeout(() => setCopied(false), 1800);
     });
   };
@@ -735,7 +777,7 @@ export default function TranslatorPage() {
                     onSentenceChange={setSentence}
                     onProgressChange={setProgress}
                     onCameraReady={setCameraReady}
-                    onCameraError={() => setCameraError(true)}
+                    onCameraError={() => { setCameraError(true); toast.error('Camera access denied', { duration: 4000 }); }}
                   />
                   {!cameraReady && (
                     <div className={styles.cameraLoadingOverlay}>
@@ -812,6 +854,7 @@ export default function TranslatorPage() {
                   const msg = 'EMERGENCY. I need help. This is urgent.';
                   speakText(msg);
                   addDeafMessage(msg);
+                  toast.error('🚨 Emergency alert sent', { duration: 2500 });
                 }}
               >
                 <AlertCircle size={15} />
@@ -885,7 +928,7 @@ export default function TranslatorPage() {
                         animate={{ scale: 1, opacity: 1 }}
                         transition={{ delay: i * 0.04 }}
                         className={styles.quickBtn}
-                        onClick={() => { speakText(msg.label); addDeafMessage(msg.label); }}
+                        onClick={() => { speakText(msg.label); addDeafMessage(msg.label); toast(`Sent: "${msg.label}"`, { duration: 1500 }); }}
                       >
                         {msg.label}
                       </motion.button>
@@ -896,7 +939,7 @@ export default function TranslatorPage() {
                         initial={{ scale: 0.92, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         className={cls(styles.quickBtn, styles.quickBtnCustom)}
-                        onClick={() => { speakText(msg); addDeafMessage(msg); }}
+                        onClick={() => { speakText(msg); addDeafMessage(msg); toast(`Sent: "${msg}"`, { duration: 1500 }); }}
                       >
                         {msg}
                       </motion.button>
@@ -941,9 +984,22 @@ export default function TranslatorPage() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.18 }}
-                className={styles.sidebarContent}
+                className={cls(styles.sidebarContent, styles.convPanel)}
               >
-                <h3>Conversation</h3>
+                <div className={styles.convHeader}>
+                  <h3>Conversation Mode</h3>
+                  <button
+                    className={cls(styles.convTypingToggle, manualInputOpen && styles.convTypingToggleActive)}
+                    onClick={() => {
+                      const next = !manualInputOpen;
+                      setManualInputOpen(next);
+                      localStorage.setItem('senyas-manual-input-enabled', String(next));
+                    }}
+                    title={manualInputOpen ? 'Hide text input' : 'Type a message'}
+                  >
+                    <Type size={14} />
+                  </button>
+                </div>
 
                 {!speechSupported && (
                   <p style={{ fontSize: 11, color: '#ef4444', marginBottom: 12, fontStyle: 'italic' }}>
@@ -957,7 +1013,8 @@ export default function TranslatorPage() {
                   disabled={!speechSupported}
                 >
                   {isListening && <span className={styles.pulseRing} />}
-                  {isListening ? '🔴 Listening… Stop' : '🎙 Tap to Listen'}
+                  <Mic size={14} />
+                  {isListening ? 'Listening… Stop' : 'Tap to Listen'}
                 </button>
 
                 <div className={styles.convFeed} ref={convFeedRef}>
@@ -974,7 +1031,7 @@ export default function TranslatorPage() {
                         className={cls(styles.convMsgRow, isUser ? styles.convMsgRowUser : styles.convMsgRowSpeaker)}
                       >
                         <div className={cls(styles.convAvatarCircle, isUser ? styles.convAvatarUser : styles.convAvatarSpeaker)}>
-                          {isUser ? profileInitials : '🎙'}
+                          {isUser ? profileInitials : <Mic size={13} />}
                         </div>
                         <div className={styles.convBubbleWrapper}>
                           <span className={styles.convMsgName}>
@@ -998,11 +1055,30 @@ export default function TranslatorPage() {
                   })}
                 </div>
 
+                {manualInputOpen && (
+                  <div className={styles.manualInputRow}>
+                    <input
+                      type="text"
+                      className={styles.manualInput}
+                      placeholder="Type a message..."
+                      value={manualText}
+                      onChange={e => setManualText(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && sendManualMessage()}
+                    />
+                    <button className={styles.manualSendBtn} onClick={sendManualMessage}>
+                      <Send size={14} />
+                    </button>
+                  </div>
+                )}
+
                 {convMessages.length > 0 && (
                   <button
                     className={styles.clearConvBtn}
                     onClick={() => {
-                      if (window.confirm('Clear all messages?')) setConvMessages([]);
+                      if (window.confirm('Clear all messages?')) {
+                        setConvMessages([]);
+                        toast('Conversation cleared', { duration: 1500 });
+                      }
                     }}
                   >
                     Clear Conversation
@@ -1015,6 +1091,22 @@ export default function TranslatorPage() {
           </AnimatePresence>
         </motion.aside>
       </main>
+      <Toaster
+        position="bottom-center"
+        richColors
+        closeButton
+        theme={theme}
+        toastOptions={{
+          style: {
+            background: 'var(--glass-bg)',
+            backdropFilter: 'blur(var(--glass-blur))',
+            WebkitBackdropFilter: 'blur(var(--glass-blur))',
+            border: '1px solid var(--glass-border)',
+            boxShadow: 'var(--glass-shadow)',
+            color: 'var(--text-primary)',
+          },
+        }}
+      />
     </div>
   );
 }
