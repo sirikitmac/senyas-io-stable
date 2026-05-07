@@ -70,6 +70,8 @@ type Contact = {
   number: string;
 };
 
+type ConvMessage = { id: string; speaker: 'hearing' | 'deaf'; text: string; timestamp: number; interim?: boolean };
+
 export default function TranslatorPage() {
   const [leftCollapsed,   setLeftCollapsed]   = useState(false);
   const [rightCollapsed,  setRightCollapsed]  = useState(false);
@@ -90,6 +92,10 @@ export default function TranslatorPage() {
   const [copied,          setCopied]          = useState(false);
   const [voices,          setVoices]          = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoice,   setSelectedVoice]   = useState<SpeechSynthesisVoice | null>(null);
+  const [settingsOpen,    setSettingsOpen]    = useState(false);
+  const [convMessages,    setConvMessages]    = useState<ConvMessage[]>([]);
+  const [isListening,     setIsListening]     = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
 
   // Profile
   const [profileName,     setProfileName]     = useState('Juan Dela Cruz');
@@ -117,7 +123,15 @@ export default function TranslatorPage() {
   const [newContactNumber,     setNewContactNumber]     = useState('');
   const [addContactError,      setAddContactError]      = useState('');
 
-  const detectorRef = useRef<ASLDetectorRef>(null);
+  const [timeTick, setTimeTick] = useState(0);
+
+  const detectorRef       = useRef<ASLDetectorRef>(null);
+  const settingsRef       = useRef<HTMLDivElement>(null);
+  const recognitionRef    = useRef<any>(null);
+  const interimIdRef      = useRef<string | null>(null);
+  const convFeedRef       = useRef<HTMLDivElement>(null);
+  const pauseTimerRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastCommittedRef  = useRef('');
 
   // Sync both data-theme attribute AND .light class so global styles + module styles stay in sync
   useEffect(() => {
@@ -145,6 +159,82 @@ export default function TranslatorPage() {
     return () => { synth.onvoiceschanged = null; };
   }, []);
 
+  useEffect(() => {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) return;
+    setSpeechSupported(true);
+    const rec = new SR();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.lang = 'en-US';
+    rec.onresult = (e: any) => {
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const text = e.results[i][0].transcript.trim();
+        if (!text) continue;
+        if (e.results[i].isFinal) {
+          const fid = interimIdRef.current;
+          interimIdRef.current = null;
+          setConvMessages(prev => {
+            const filtered = fid ? prev.filter(m => m.id !== fid) : prev;
+            return [...filtered, { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, speaker: 'hearing', text, timestamp: Date.now() }];
+          });
+        } else {
+          if (!interimIdRef.current) interimIdRef.current = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+          const id = interimIdRef.current;
+          setConvMessages(prev => {
+            const idx = prev.findIndex(m => m.id === id);
+            if (idx !== -1) { const n = [...prev]; n[idx] = { ...n[idx], text }; return n; }
+            return [...prev, { id, speaker: 'hearing', text, timestamp: Date.now(), interim: true }];
+          });
+        }
+      }
+    };
+    rec.onend = () => { setIsListening(false); interimIdRef.current = null; };
+    recognitionRef.current = rec;
+    return () => { rec.abort(); };
+  }, []);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) setSettingsOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [settingsOpen]);
+
+  // Pause detection: auto-add deaf user's sentence after 2s of no signing
+  useEffect(() => {
+    if (!sentence.trim()) return;
+    if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current);
+    pauseTimerRef.current = setTimeout(() => {
+      const trimmed = sentence.trim();
+      if (!trimmed || trimmed === lastCommittedRef.current) return;
+      lastCommittedRef.current = trimmed;
+      setConvMessages(prev => [...prev, {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        speaker: 'deaf',
+        text: trimmed,
+        timestamp: Date.now(),
+      }]);
+      setSentence('');
+      detectorRef.current?.clearSentence();
+    }, 2000);
+    return () => { if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current); };
+  }, [sentence]);
+
+  // Refresh relative timestamps every 30s
+  useEffect(() => {
+    const id = setInterval(() => setTimeTick(n => n + 1), 30000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Auto-scroll conversation feed to bottom on new messages
+  useEffect(() => {
+    const el = convFeedRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+  }, [convMessages]);
+
   const addCustomMessage = () => {
     if (customText.trim()) {
       setCustomMessages(prev => [...prev, customText.trim()]);
@@ -162,12 +252,47 @@ export default function TranslatorPage() {
     window.speechSynthesis.speak(utt);
   };
 
+  const addDeafMessage = (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    lastCommittedRef.current = trimmed;
+    setConvMessages(prev => [...prev, {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      speaker: 'deaf',
+      text: trimmed,
+      timestamp: Date.now(),
+    }]);
+  };
+
   const handleSpace = () => {
     const current = detectorRef.current?.sentence ?? sentence;
     if (!current.endsWith(' ')) {
       detectorRef.current?.addSpace();
     }
     speakText(current);
+    addDeafMessage(current);
+  };
+
+  const toggleMic = () => {
+    if (!recognitionRef.current) return;
+    if (isListening) {
+      recognitionRef.current.stop();
+    } else {
+      try { recognitionRef.current.start(); setIsListening(true); } catch {}
+    }
+  };
+
+  // timeTick is read here so re-renders from the 30s interval recalculate all timestamps
+  const formatRelativeTime = (ts: number) => {
+    void timeTick;
+    const diff = Math.floor((Date.now() - ts) / 1000);
+    if (diff < 5)  return 'just now';
+    if (diff < 60) return `${diff}s ago`;
+    const mins = Math.floor(diff / 60);
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24)  return `${hrs}h ago`;
+    return new Date(ts).toLocaleDateString();
   };
 
   const handleCopy = () => {
@@ -286,7 +411,7 @@ export default function TranslatorPage() {
           <button
             onClick={() => setRightCollapsed(c => !c)}
             className={cls(styles.headerToggle, !rightCollapsed && styles.headerToggleActive)}
-            title="Toggle Settings"
+            title="Toggle Conversation"
           >
             <Settings size={17} />
           </button>
@@ -529,7 +654,69 @@ export default function TranslatorPage() {
 
         <section className={styles.centerPanel}>
           <div className={styles.centerInner}>
-            <div className={styles.cameraWrapper}>
+              <div className={styles.settingsToolbar} ref={settingsRef}>
+              <button className={styles.settingsPill} onClick={() => setSettingsOpen(o => !o)}>
+                <Settings size={13} />
+                Settings
+              </button>
+              {settingsOpen && (
+                <div className={styles.settingsPopover}>
+                  <div className={styles.settingGroup}>
+                    <p className={styles.settingGroupTitle}>Features</p>
+                    <div className={styles.settingRow}>
+                      <span className={styles.settingLabel}>Quick Message</span>
+                      <button
+                        onClick={() => setQuickMsgEnabled(v => !v)}
+                        className={cls(styles.toggle, !quickMsgEnabled && styles.off)}
+                        aria-pressed={quickMsgEnabled}
+                      >
+                        <div className={styles.toggleKnob} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className={styles.settingGroup}>
+                    <p className={styles.settingGroupTitle}>Mediapipe Color</p>
+                    <div className={styles.selectWrapper}>
+                      <span className={styles.selectColorDot} style={{ background: landmarkColor }} />
+                      <select
+                        className={cls(styles.voiceSelect, styles.colorSelect)}
+                        value={selectedColorKey}
+                        onChange={e => setLandmarkColor(COLOR_MAP[e.target.value])}
+                      >
+                        {Object.keys(COLOR_MAP).map(name => (
+                          <option key={name} value={name}>{name.charAt(0).toUpperCase() + name.slice(1)}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className={styles.settingGroup}>
+                    <p className={styles.settingGroupTitle}>Display Mode</p>
+                    <select
+                      className={styles.voiceSelect}
+                      value={displayMode}
+                      onChange={e => setDisplayMode(e.target.value as 'camera' | 'mediapipe' | 'both')}
+                    >
+                      <option value="camera">Camera Only</option>
+                      <option value="mediapipe">Mediapipe Only</option>
+                      <option value="both">Both</option>
+                    </select>
+                  </div>
+                  <div className={styles.settingGroup} style={{ borderBottom: 'none', marginBottom: 0, paddingBottom: 0 }}>
+                    <p className={styles.settingGroupTitle}>Voice</p>
+                    <select
+                      className={styles.voiceSelect}
+                      value={selectedVoice?.name ?? ''}
+                      onChange={e => setSelectedVoice(voices.find(v => v.name === e.target.value) ?? null)}
+                    >
+                      {voices.length === 0 && <option value="">No voices available</option>}
+                      {voices.map(v => <option key={v.name} value={v.name}>{v.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+
+          <div className={styles.cameraWrapper}>
               {cameraError ? (
                 <div className={styles.deniedOverlay}>
                   <AlertCircle size={32} style={{ color: '#ef4444', opacity: 0.6 }} />
@@ -619,7 +806,14 @@ export default function TranslatorPage() {
             </div>
 
             <div className={styles.quickSection}>
-              <button className={styles.emergencyBtn}>
+              <button
+                className={styles.emergencyBtn}
+                onClick={() => {
+                  const msg = 'EMERGENCY. I need help. This is urgent.';
+                  speakText(msg);
+                  addDeafMessage(msg);
+                }}
+              >
                 <AlertCircle size={15} />
                 Emergency
               </button>
@@ -691,7 +885,7 @@ export default function TranslatorPage() {
                         animate={{ scale: 1, opacity: 1 }}
                         transition={{ delay: i * 0.04 }}
                         className={styles.quickBtn}
-                        onClick={() => speakText(msg.label)}
+                        onClick={() => { speakText(msg.label); addDeafMessage(msg.label); }}
                       >
                         {msg.label}
                       </motion.button>
@@ -702,7 +896,7 @@ export default function TranslatorPage() {
                         initial={{ scale: 0.92, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         className={cls(styles.quickBtn, styles.quickBtnCustom)}
-                        onClick={() => speakText(msg)}
+                        onClick={() => { speakText(msg); addDeafMessage(msg); }}
                       >
                         {msg}
                       </motion.button>
@@ -718,7 +912,7 @@ export default function TranslatorPage() {
           <button
             onClick={() => setRightCollapsed(false)}
             className={cls(styles.sidebarOpenTrigger, styles.rightTrigger)}
-            title="Open Settings"
+            title="Open Conversation"
           >
             <ChevronLeft size={14} />
           </button>
@@ -749,71 +943,73 @@ export default function TranslatorPage() {
                 transition={{ duration: 0.18 }}
                 className={styles.sidebarContent}
               >
-                <h3>Settings</h3>
+                <h3>Conversation</h3>
 
-                <div className={styles.settingGroup}>
-                  <p className={styles.settingGroupTitle}>Features</p>
-                  <div className={styles.settingRow}>
-                    <span className={styles.settingLabel}>Quick Message</span>
-                    <button
-                      onClick={() => setQuickMsgEnabled(v => !v)}
-                      className={cls(styles.toggle, !quickMsgEnabled && styles.off)}
-                      aria-pressed={quickMsgEnabled}
-                    >
-                      <div className={styles.toggleKnob} />
-                    </button>
-                  </div>
+                {!speechSupported && (
+                  <p style={{ fontSize: 11, color: '#ef4444', marginBottom: 12, fontStyle: 'italic' }}>
+                    Speech recognition not available. Try Chrome or Edge.
+                  </p>
+                )}
+
+                <button
+                  className={cls(styles.micBtn, isListening && styles.micBtnListening)}
+                  onClick={toggleMic}
+                  disabled={!speechSupported}
+                >
+                  {isListening && <span className={styles.pulseRing} />}
+                  {isListening ? '🔴 Listening… Stop' : '🎙 Tap to Listen'}
+                </button>
+
+                <div className={styles.convFeed} ref={convFeedRef}>
+                  {convMessages.length === 0 && (
+                    <p className={styles.convEmpty}>
+                      Conversation will appear here.
+                    </p>
+                  )}
+                  {convMessages.map(msg => {
+                    const isUser = msg.speaker === 'deaf';
+                    return (
+                      <div
+                        key={msg.id}
+                        className={cls(styles.convMsgRow, isUser ? styles.convMsgRowUser : styles.convMsgRowSpeaker)}
+                      >
+                        <div className={cls(styles.convAvatarCircle, isUser ? styles.convAvatarUser : styles.convAvatarSpeaker)}>
+                          {isUser ? profileInitials : '🎙'}
+                        </div>
+                        <div className={styles.convBubbleWrapper}>
+                          <span className={styles.convMsgName}>
+                            {isUser ? profileName : 'Speaker'}
+                          </span>
+                          <div
+                            className={cls(
+                              styles.convBubble,
+                              isUser ? styles.convBubbleUser : styles.convBubbleSpeaker,
+                              msg.interim && styles.convInterimBubble,
+                            )}
+                            onClick={() => speakText(msg.text)}
+                            title="Tap to replay"
+                          >
+                            <p className={styles.convBubbleText}>{msg.text}</p>
+                          </div>
+                          <span className={styles.convMsgTime}>{formatRelativeTime(msg.timestamp)}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
 
-                <div className={styles.settingGroup}>
-                  <p className={styles.settingGroupTitle}>Mediapipe Color</p>
-                  <div className={styles.selectWrapper}>
-                    <span
-                      className={styles.selectColorDot}
-                      style={{ background: landmarkColor }}
-                    />
-                    <select
-                      className={cls(styles.voiceSelect, styles.colorSelect)}
-                      value={selectedColorKey}
-                      onChange={e => setLandmarkColor(COLOR_MAP[e.target.value])}
-                    >
-                      {Object.keys(COLOR_MAP).map(name => (
-                        <option key={name} value={name}>
-                          {name.charAt(0).toUpperCase() + name.slice(1)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className={styles.settingGroup}>
-                  <p className={styles.settingGroupTitle}>Display Mode</p>
-                  <select
-                    className={styles.voiceSelect}
-                    value={displayMode}
-                    onChange={e => setDisplayMode(e.target.value as 'camera' | 'mediapipe' | 'both')}
+                {convMessages.length > 0 && (
+                  <button
+                    className={styles.clearConvBtn}
+                    onClick={() => {
+                      if (window.confirm('Clear all messages?')) setConvMessages([]);
+                    }}
                   >
-                    <option value="camera">Camera Only</option>
-                    <option value="mediapipe">Mediapipe Only</option>
-                    <option value="both">Both</option>
-                  </select>
-                </div>
+                    Clear Conversation
+                  </button>
+                )}
 
-                <div className={styles.settingGroup}>
-                  <p className={styles.settingGroupTitle}>Voice</p>
-                  <select
-                    className={styles.voiceSelect}
-                    value={selectedVoice?.name ?? ''}
-                    onChange={e => setSelectedVoice(voices.find(v => v.name === e.target.value) ?? null)}
-                  >
-                    {voices.length === 0 && <option value="">No voices available</option>}
-                    {voices.map(v => (
-                      <option key={v.name} value={v.name}>{v.name}</option>
-                    ))}
-                  </select>
-                </div>
 
-            
               </motion.div>
             )}
           </AnimatePresence>

@@ -1533,3 +1533,310 @@
 .colorSelect {
   padding-left: 36px;
 }
+
+/* ── Settings Toolbar ────────────────────────────────── */
+.settingsToolbar {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 2px 2px;
+}
+
+.settingsPill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 99px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.settingsPill:hover {
+  background: var(--bg-glass-hover);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.settingsPopover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 18px 18px 18px;
+  min-width: 270px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+[data-theme="light"] .settingsPopover,
+:root.light .settingsPopover {
+  background: rgba(250, 248, 246, 0.97);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+/* ── Conversation Panel ──────────────────────────────── */
+.micBtn {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-bottom: 4px;
+}
+
+.micBtn:hover:not(:disabled) {
+  background: var(--bg-glass-hover);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.micBtn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.micBtnListening {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+  color: #ef4444 !important;
+}
+
+.micBtnListening:hover {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border-color: rgba(239, 68, 68, 0.6) !important;
+}
+
+@keyframes pulseRingAnim {
+  0%   { transform: scale(1);   opacity: 0.8; }
+  70%  { transform: scale(2.2); opacity: 0;   }
+  100% { transform: scale(1);   opacity: 0;   }
+}
+
+.pulseRing {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: pulseRingAnim 1.4s ease-out infinite;
+}
+
+.convFeed {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  max-height: 380px;
+  padding: 4px 0;
+  margin: 8px 0;
+  flex: 1;
+}
+
+.convMessage {
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.convMessage:hover {
+  background: var(--bg-glass-hover);
+  border-color: var(--border-hover);
+}
+
+[data-theme="light"] .convMessage,
+:root.light .convMessage {
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.convSpeakerLabel {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-family: 'Space Mono', monospace;
+}
+
+.convTimestamp {
+  display: block;
+  font-size: 9px;
+  color: var(--text-muted);
+  font-family: 'Space Mono', monospace;
+  text-align: right;
+  margin-top: 6px;
+}
+
+.clearConvBtn {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: rgba(239, 68, 68, 0.6);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  margin-top: auto;
+}
+
+.clearConvBtn:hover {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.45);
+  color: #ef4444;
+}
+
+/* ── Conversation Chat Bubbles ───────────────────────── */
+.convEmpty {
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: center;
+  padding: 32px 0;
+  font-style: italic;
+}
+
+.convMsgRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 7px;
+}
+
+.convMsgRowUser {
+  flex-direction: row-reverse;
+}
+
+.convMsgRowSpeaker {
+  flex-direction: row;
+}
+
+.convBubbleWrapper {
+  display: flex;
+  flex-direction: column;
+  max-width: 78%;
+  gap: 3px;
+}
+
+.convMsgRowUser .convBubbleWrapper {
+  align-items: flex-end;
+}
+
+.convMsgRowSpeaker .convBubbleWrapper {
+  align-items: flex-start;
+}
+
+.convMsgName {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-family: 'Space Mono', monospace;
+}
+
+.convBubble {
+  padding: 8px 11px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.12s ease;
+  word-break: break-word;
+}
+
+.convBubble:hover {
+  opacity: 0.82;
+  transform: scale(0.99);
+}
+
+.convBubbleUser {
+  background: var(--accent-dim);
+  border: 1px solid rgba(255, 179, 198, 0.22);
+  border-bottom-right-radius: 3px;
+}
+
+[data-theme="light"] .convBubbleUser,
+:root.light .convBubbleUser {
+  background: rgba(232, 115, 142, 0.12);
+  border-color: rgba(232, 115, 142, 0.2);
+}
+
+.convBubbleSpeaker {
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 3px;
+}
+
+.convInterimBubble {
+  opacity: 0.5;
+  font-style: italic;
+}
+
+.convBubbleText {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.45;
+}
+
+.convMsgTime {
+  font-size: 9px;
+  color: var(--text-muted);
+  font-family: 'Space Mono', monospace;
+}
+
+.convAvatarCircle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 800;
+  flex-shrink: 0;
+  letter-spacing: -0.5px;
+  font-family: 'Outfit', sans-serif;
+}
+
+.convAvatarUser {
+  background: var(--accent-dim);
+  border: 1px solid rgba(255, 179, 198, 0.28);
+  color: var(--accent);
+}
+
+.convAvatarSpeaker {
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-family: inherit;
+}
